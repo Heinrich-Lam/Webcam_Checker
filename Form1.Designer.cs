@@ -43,6 +43,7 @@
             this.pbWebcam.Location = new System.Drawing.Point(14, 16);
             this.pbWebcam.Name = "pbWebcam";
             this.pbWebcam.Size = new System.Drawing.Size(481, 363);
+            this.pbWebcam.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.pbWebcam.TabIndex = 0;
             this.pbWebcam.TabStop = false;
             // 
@@ -59,7 +60,7 @@
             // 
             this.label1.AutoSize = true;
             this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 24F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label1.Location = new System.Drawing.Point(204, 9);
+            this.label1.Location = new System.Drawing.Point(220, 9);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(271, 37);
             this.label1.TabIndex = 2;
@@ -70,12 +71,12 @@
             this.cbCamera.FormattingEnabled = true;
             this.cbCamera.Location = new System.Drawing.Point(211, 58);
             this.cbCamera.Name = "cbCamera";
-            this.cbCamera.Size = new System.Drawing.Size(249, 21);
+            this.cbCamera.Size = new System.Drawing.Size(118, 21);
             this.cbCamera.TabIndex = 3;
             // 
             // btnStart
             // 
-            this.btnStart.Location = new System.Drawing.Point(486, 56);
+            this.btnStart.Location = new System.Drawing.Point(346, 56);
             this.btnStart.Name = "btnStart";
             this.btnStart.Size = new System.Drawing.Size(75, 23);
             this.btnStart.TabIndex = 4;
@@ -85,7 +86,7 @@
             // 
             // btnStop
             // 
-            this.btnStop.Location = new System.Drawing.Point(597, 55);
+            this.btnStop.Location = new System.Drawing.Point(427, 56);
             this.btnStop.Name = "btnStop";
             this.btnStop.Size = new System.Drawing.Size(75, 23);
             this.btnStop.TabIndex = 5;
