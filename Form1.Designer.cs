@@ -34,6 +34,7 @@
             this.cbCamera = new System.Windows.Forms.ComboBox();
             this.btnStart = new System.Windows.Forms.Button();
             this.btnStop = new System.Windows.Forms.Button();
+            this.btnCapture = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.pbWebcam)).BeginInit();
             this.panel1.SuspendLayout();
             this.SuspendLayout();
@@ -42,7 +43,7 @@
             // 
             this.pbWebcam.Location = new System.Drawing.Point(14, 16);
             this.pbWebcam.Name = "pbWebcam";
-            this.pbWebcam.Size = new System.Drawing.Size(481, 363);
+            this.pbWebcam.Size = new System.Drawing.Size(574, 363);
             this.pbWebcam.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.pbWebcam.TabIndex = 0;
             this.pbWebcam.TabStop = false;
@@ -51,9 +52,9 @@
             // 
             this.panel1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.panel1.Controls.Add(this.pbWebcam);
-            this.panel1.Location = new System.Drawing.Point(82, 98);
+            this.panel1.Location = new System.Drawing.Point(41, 98);
             this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(513, 394);
+            this.panel1.Size = new System.Drawing.Size(608, 394);
             this.panel1.TabIndex = 1;
             // 
             // label1
@@ -69,14 +70,14 @@
             // cbCamera
             // 
             this.cbCamera.FormattingEnabled = true;
-            this.cbCamera.Location = new System.Drawing.Point(211, 58);
+            this.cbCamera.Location = new System.Drawing.Point(97, 58);
             this.cbCamera.Name = "cbCamera";
-            this.cbCamera.Size = new System.Drawing.Size(118, 21);
+            this.cbCamera.Size = new System.Drawing.Size(172, 21);
             this.cbCamera.TabIndex = 3;
             // 
             // btnStart
             // 
-            this.btnStart.Location = new System.Drawing.Point(346, 56);
+            this.btnStart.Location = new System.Drawing.Point(290, 56);
             this.btnStart.Name = "btnStart";
             this.btnStart.Size = new System.Drawing.Size(75, 23);
             this.btnStart.TabIndex = 4;
@@ -86,7 +87,7 @@
             // 
             // btnStop
             // 
-            this.btnStop.Location = new System.Drawing.Point(427, 56);
+            this.btnStop.Location = new System.Drawing.Point(371, 56);
             this.btnStop.Name = "btnStop";
             this.btnStop.Size = new System.Drawing.Size(75, 23);
             this.btnStop.TabIndex = 5;
@@ -94,11 +95,22 @@
             this.btnStop.UseVisualStyleBackColor = true;
             this.btnStop.Click += new System.EventHandler(this.btnStop_Click);
             // 
+            // btnCapture
+            // 
+            this.btnCapture.Location = new System.Drawing.Point(452, 56);
+            this.btnCapture.Name = "btnCapture";
+            this.btnCapture.Size = new System.Drawing.Size(75, 23);
+            this.btnCapture.TabIndex = 6;
+            this.btnCapture.Text = "Capture";
+            this.btnCapture.UseVisualStyleBackColor = true;
+            this.btnCapture.Click += new System.EventHandler(this.btnCapture_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(707, 504);
+            this.Controls.Add(this.btnCapture);
             this.Controls.Add(this.btnStop);
             this.Controls.Add(this.btnStart);
             this.Controls.Add(this.cbCamera);
@@ -124,6 +136,7 @@
         private System.Windows.Forms.ComboBox cbCamera;
         private System.Windows.Forms.Button btnStart;
         private System.Windows.Forms.Button btnStop;
+        private System.Windows.Forms.Button btnCapture;
     }
 }
 

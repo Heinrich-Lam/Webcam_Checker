@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -146,7 +147,11 @@ namespace Webcam_Checker
         private void VideoCaptureDevice_NewFrame(object sender, NewFrameEventArgs eventArgs)
         {
             //Sets the image for the display, calling the Frame to update the display in real-time.
-            pbWebcam.Image = (Bitmap)eventArgs.Frame.Clone();
+            //The RotateNoneFlipX, inverts the display to ensure that the image displays correctly.
+            Bitmap frame = (Bitmap)eventArgs.Frame.Clone();
+            frame.RotateFlip(RotateFlipType.RotateNoneFlipX);
+            pbWebcam.Image = frame;
+
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
@@ -169,6 +174,61 @@ namespace Webcam_Checker
                 videoCaptureDevice.Stop();
                 pbWebcam.Image = null;
             }
+        }
+
+        private void btnCapture_Click(object sender, EventArgs e)
+        {
+            if (pbWebcam.Image == null)
+            {
+                MessageBox.Show("No image found to save!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+            // Define default values
+            string defaultFilename = $"image_{DateTime.Now:yyyyMMdd_HHmmss}.png";
+            string defaultLocation = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+
+            SaveFileDialog saveFileDialog = new SaveFileDialog();
+            saveFileDialog.Filter = "Image Files (*.png; *.jpg; *.jpeg)|*.png; *.jpg; *.jpeg";
+            saveFileDialog.Title = "Save Image As";
+            saveFileDialog.InitialDirectory = defaultLocation;
+            saveFileDialog.FileName = defaultFilename;
+
+            if (saveFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                try
+                {
+                    string fileName = Path.GetFileName(saveFileDialog.FileName);
+                    string directory = Path.GetDirectoryName(saveFileDialog.FileName);
+
+                    if (!Directory.Exists(directory))
+                    {
+                        Directory.CreateDirectory(directory);
+                    }
+
+                    string fullPath = Path.Combine(directory, fileName);
+
+                    switch (Path.GetExtension(fileName).ToLower())
+                    {
+                        case ".jpg":
+                            pbWebcam.Image.Save(fullPath, ImageFormat.Jpeg);
+                            break;
+                        case ".png":
+                            pbWebcam.Image.Save(fullPath, ImageFormat.Png);
+                            break;
+                        default:
+                            MessageBox.Show("Unsupported file format. Please save as .jpg or .png", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            break;
+                    }
+                    MessageBox.Show("Image saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                }
+                catch (Exception ex)
+                {
+
+                    MessageBox.Show($"An error occured while saving the image: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+
         }
     }
 }
