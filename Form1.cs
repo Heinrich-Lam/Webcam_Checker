@@ -176,6 +176,7 @@ namespace Webcam_Checker
             }
         }
 
+        #region "Capture Picture From Camera."
         private void btnCapture_Click(object sender, EventArgs e)
         {
             if (pbWebcam.Image == null)
@@ -183,52 +184,88 @@ namespace Webcam_Checker
                 MessageBox.Show("No image found to save!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 
+            #region "User Set Name & Location."
             // Define default values
-            string defaultFilename = $"image_{DateTime.Now:yyyyMMdd_HHmmss}.png";
+            //string defaultFilename = $"image_{DateTime.Now:yyyyMMdd_HHmmss}.png";
+            //string defaultLocation = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+
+            //SaveFileDialog saveFileDialog = new SaveFileDialog();
+            //saveFileDialog.Filter = "Image Files (*.png; *.jpg; *.jpeg)|*.png; *.jpg; *.jpeg";
+            //saveFileDialog.Title = "Save Image As";
+            //saveFileDialog.InitialDirectory = defaultLocation;
+            //saveFileDialog.FileName = defaultFilename;
+
+            //if (saveFileDialog.ShowDialog() == DialogResult.OK)
+            //{
+            //    try
+            //    {
+            //        string fileName = Path.GetFileName(saveFileDialog.FileName);
+            //        string directory = Path.GetDirectoryName(saveFileDialog.FileName);
+
+            //        if (!Directory.Exists(directory))
+            //        {
+            //            Directory.CreateDirectory(directory);
+            //        }
+
+            //        string fullPath = Path.Combine(directory, fileName);
+
+            //        switch (Path.GetExtension(fileName).ToLower())
+            //        {
+            //            case ".jpg":
+            //                pbWebcam.Image.Save(fullPath, ImageFormat.Jpeg);
+            //                break;
+            //            case ".png":
+            //                pbWebcam.Image.Save(fullPath, ImageFormat.Png);
+            //                break;
+            //            default:
+            //                MessageBox.Show("Unsupported file format. Please save as .jpg or .png", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            //                break;
+            //        }
+            //        MessageBox.Show("Image saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+            //    }
+            //    catch (Exception ex)
+            //    {
+
+            //        MessageBox.Show($"An error occured while saving the image: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            //    }
+            //}
+            #endregion
+
+
+            #region "Instant Capture."
+            //Sets the default save location of the Image to the Desktop.
             string defaultLocation = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            //Sets Unique name for the image File.
+            string uniqueFilename = $"image_{DateTime.Now:yyyyMMdd_HHmmss}.png";
+            string fullPath = Path.Combine(defaultLocation, uniqueFilename);
 
-            SaveFileDialog saveFileDialog = new SaveFileDialog();
-            saveFileDialog.Filter = "Image Files (*.png; *.jpg; *.jpeg)|*.png; *.jpg; *.jpeg";
-            saveFileDialog.Title = "Save Image As";
-            saveFileDialog.InitialDirectory = defaultLocation;
-            saveFileDialog.FileName = defaultFilename;
-
-            if (saveFileDialog.ShowDialog() == DialogResult.OK)
+            try
             {
-                try
+                Directory.CreateDirectory(defaultLocation); // Ensure desktop folder exists
+                //Saves the image as either a '.png' file or a '.jpg' file.
+                //Default format is '.png' as it is better quality.
+                switch (Path.GetExtension(uniqueFilename).ToLower())
                 {
-                    string fileName = Path.GetFileName(saveFileDialog.FileName);
-                    string directory = Path.GetDirectoryName(saveFileDialog.FileName);
-
-                    if (!Directory.Exists(directory))
-                    {
-                        Directory.CreateDirectory(directory);
-                    }
-
-                    string fullPath = Path.Combine(directory, fileName);
-
-                    switch (Path.GetExtension(fileName).ToLower())
-                    {
-                        case ".jpg":
-                            pbWebcam.Image.Save(fullPath, ImageFormat.Jpeg);
-                            break;
-                        case ".png":
-                            pbWebcam.Image.Save(fullPath, ImageFormat.Png);
-                            break;
-                        default:
-                            MessageBox.Show("Unsupported file format. Please save as .jpg or .png", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            break;
-                    }
-                    MessageBox.Show("Image saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
+                    case ".jpg":
+                        pbWebcam.Image.Save(fullPath, ImageFormat.Jpeg);
+                        break;
+                    case ".png":
+                        pbWebcam.Image.Save(fullPath, ImageFormat.Png);
+                        break;
+                    default:
+                        throw new ArgumentException("Unsupported file format");
                 }
-                catch (Exception ex)
-                {
 
-                    MessageBox.Show($"An error occured while saving the image: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                MessageBox.Show($"Image '{uniqueFilename}' saved successfully to the desktop.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"An error occurred while saving the image: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            #endregion
 
         }
+        #endregion
     }
 }
