@@ -15,12 +15,27 @@ using AForge.Imaging;
 using System.Data.SqlClient;
 using System.Reflection;
 using System.Xml.Linq;
+using System.Threading;
 
 namespace Webcam_Checker
 {
 
     public partial class Form1 : Form
     {
+        public Form1()
+        {
+            InitializeComponent();
+            cbResolution.SelectedIndexChanged += cbResolution_SelectedIndexChanged;
+
+            filterInfoCollection = new FilterInfoCollection(FilterCategory.VideoInputDevice);
+            videoCaptureDevice = null;
+            currentFrame = new Bitmap(1280, 720); // Adjust dimensions as needed
+            isCapturing = false;
+
+            btnCapture.Enabled = false;
+        }
+
+        #region "Global Variables."
         private FilterInfoCollection filterInfoCollection;
         private VideoCaptureDevice videoCaptureDevice;
         private Bitmap currentFrame;
@@ -34,24 +49,30 @@ namespace Webcam_Checker
         public int Width { get; set; }
         public int Height { get; set; }
 
+        public int originalWidth;
+        public int originalHeight;
+
         //MSSQL Connection String.
         public static string SQLConnectionString = "Data Source=.; Persist Security Info=True" +
                                                     ";User ID=sa" +
                                                     ";Password=bull$dog" +
                                                     ";Initial Catalog=Webcam";
 
-        public Form1()
-        {
-            InitializeComponent();
-            cbResolution.SelectedIndexChanged += cbResolution_SelectedIndexChanged;
+        Thread InitialLoad = null;
+        bool isRunning = false;
 
-            filterInfoCollection = new FilterInfoCollection(FilterCategory.VideoInputDevice);
-            videoCaptureDevice = null;
-            currentFrame = new Bitmap(1280, 720); // Adjust dimensions as needed
-            isCapturing = false;
+        Thread InitialCapture = null;
+        bool isCapture = false;
+
+        #endregion
+
+        #region "Initial Load."
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            LoadVideo();
         }
 
-        private void Form1_Load(object sender, EventArgs e)
+        private void LoadVideo()
         {
             #region "Device Name."
 
@@ -93,6 +114,10 @@ namespace Webcam_Checker
 
                     if (availableResolutions.Length > 0)
                     {
+                        //// Filter out resolutions smaller than 640x360
+                        //var filteredResolutions = availableResolutions
+                        //    .Where(res => res.FrameSize.Width >= 640 && res.FrameSize.Height >= 360);
+
                         // Add all available resolutions to the cbResolution ComboBox
                         foreach (var resolution in availableResolutions)
                         {
@@ -130,7 +155,6 @@ namespace Webcam_Checker
             // Initialize currentFrame
             currentFrame = new Bitmap(Width, Height); // Adjust dimensions as needed
             #endregion
-
         }
 
         private string GetDeviceName(FilterInfo filterInfo)
@@ -153,30 +177,25 @@ namespace Webcam_Checker
 
         private void VideoCaptureDevice_NewFrame(object sender, NewFrameEventArgs eventArgs)
         {
-            frame = (Bitmap)eventArgs.Frame.Clone();
-            frame.RotateFlip(RotateFlipType.RotateNoneFlipX);
+            // Always update currentFrame with the latest frame
+            currentFrame = (Bitmap)eventArgs.Frame.Clone();
+            currentFrame.RotateFlip(RotateFlipType.RotateNoneFlipX);
 
-            // Store the brightened captured frame
-            currentFrame = frame;
+            // Only update PictureBox if not frozen
+            if (!isFrameFrozen)
+            {
+                pbWebcam.Image = (Bitmap)currentFrame.Clone();  // Display current frame
+            }
 
-            pbWebcam.Image = frame;
+            // Enable capture button after the first frame is ready
+            if (!btnCapture.Enabled)
+            {
+                btnCapture.Invoke((MethodInvoker)(() => btnCapture.Enabled = true));
+            }
         }
-        private void btnStart_Click(object sender, EventArgs e)
-        {
-            // Get the selected resolution width and height
-            var selectedResolution = videoCaptureDevice.VideoCapabilities[0]; // Assume the first one for simplicity
-            Width = selectedResolution.FrameSize.Width;
-            Height = selectedResolution.FrameSize.Height;
+        #endregion
 
-            // Reinitialize currentFrame with the correct dimensions
-            currentFrame = new Bitmap(Width, Height);
-
-            videoCaptureDevice = new VideoCaptureDevice(filterInfoCollection[cbCamera.SelectedIndex].MonikerString);
-            videoCaptureDevice.NewFrame += VideoCaptureDevice_NewFrame;
-            videoCaptureDevice.Start();
-        }
-
-
+        #region "Close and clear Resources."
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
             if (videoCaptureDevice.IsRunning == true)
@@ -193,7 +212,32 @@ namespace Webcam_Checker
             }
         }
 
+        #endregion
+
+        #region "Restart Camera."
+        private void btnStart_Click(object sender, EventArgs e)
+        {
+            // Get the selected resolution width and height
+            var selectedResolution = videoCaptureDevice.VideoCapabilities[0]; // Assume the first one for simplicity
+            Width = selectedResolution.FrameSize.Width;
+            Height = selectedResolution.FrameSize.Height;
+
+            // Reinitialize currentFrame with the correct dimensions
+            currentFrame = new Bitmap(Width, Height);
+
+            videoCaptureDevice = new VideoCaptureDevice(filterInfoCollection[cbCamera.SelectedIndex].MonikerString);
+            videoCaptureDevice.NewFrame += VideoCaptureDevice_NewFrame;
+            videoCaptureDevice.Start();
+        }
+        #endregion
+
+        #region "Stop Camera."
         private void btnStop_Click(object sender, EventArgs e)
+        {
+            StopVideoOutput();
+        }
+
+        private void StopVideoOutput()
         {
             if (videoCaptureDevice.IsRunning == true)
             {
@@ -207,7 +251,15 @@ namespace Webcam_Checker
             }
         }
 
+        #endregion
+
+        #region "Take Picture."
         private void btnCapture_Click(object sender, EventArgs e)
+        {
+            CaptureImage();
+        }
+
+        private void CaptureImage()
         {
             if (cbResolution.SelectedIndex <= 0)
             {
@@ -215,38 +267,41 @@ namespace Webcam_Checker
             }
             else
             {
-                if (!isFrameFrozen)
+                if (!isFrameFrozen && currentFrame != null)
                 {
-                    // Capture the frame
-                    currentFrame = CaptureFrame();
-
-                    // Freeze the frame
+                    // Freeze the frame (only stops updating PictureBox, not the frame capture)
                     isFrameFrozen = true;
 
-                    // Perform image processing asynchronously
-                    Task.Run(() => ProcessAndSaveImage());
+                    // Perform image processing asynchronously using the current frame
+                    Task.Run(() => ProcessAndSaveImage((Bitmap)currentFrame.Clone()));
+                }
+                else
+                {
+                    MessageBox.Show("No valid frame available for capture.");
                 }
             }
         }
 
-        private Bitmap CaptureFrame()
-        {
-            // Implement your frame capture logic here
-            // This could involve getting the latest frame from your webcam
-            // For demonstration purposes, I'm just returning a dummy bitmap
-            return new Bitmap(Width, Height);
-        }
-
-        private async void ProcessAndSaveImage()
+        //private Bitmap CaptureFrame()
+        //{
+        //    // Implement your frame capture logic here
+        //    // This could involve getting the latest frame from your webcam
+        //    // For demonstration purposes, I'm just returning a dummy bitmap
+        //    return new Bitmap(Width, Height);
+        //}
+        #region "Process Image to insert into Database."
+        private async void ProcessAndSaveImage(Bitmap capturedFrame)
         {
             try
             {
                 string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
 
                 // Optimize image resizing
-                Bitmap resizedFrame = new Bitmap(currentFrame.Width, currentFrame.Height);
+                Bitmap resizedFrame = new Bitmap(capturedFrame.Width, capturedFrame.Height);
                 using (Graphics graphics = Graphics.FromImage(resizedFrame))
-                    graphics.DrawImage(currentFrame, 0, 0, currentFrame.Width, currentFrame.Height);
+                {
+                    graphics.DrawImage(capturedFrame, 0, 0, capturedFrame.Width, capturedFrame.Height);
+                }
 
                 // Implement asynchronous image enhancement
                 ImageEnhancer enhancer = new ImageEnhancer();
@@ -255,17 +310,16 @@ namespace Webcam_Checker
                 // Convert enhanced bitmap to byte array asynchronously
                 byte[] byteArray = await Task.Run(() => ImageToByteArray(enhancedBitmap));
 
-                // Create a MemoryStream from the byte array asynchronously
+                // Save the byte array to the database asynchronously
                 using (MemoryStream memoryStream = new MemoryStream(byteArray))
                 {
-                    // Using the connection to my database.
                     using (SqlConnection connection = new SqlConnection(SQLConnectionString))
                     {
                         connection.Open();
-                        //Using the stored procedure to insert the image byte data into my database.
+
                         using (SqlCommand command = new SqlCommand("USP_INSERT_IMAGE_BYTES", connection))
                         {
-                            command.CommandType = System.Data.CommandType.StoredProcedure;
+                            command.CommandType = CommandType.StoredProcedure;
 
                             // Convert byte array to Base64 encoded string
                             string base64String = Convert.ToBase64String(byteArray);
@@ -273,14 +327,12 @@ namespace Webcam_Checker
 
                             try
                             {
-                                int rowsAffected = command.ExecuteNonQuery();
+                                int rowsAffected = await command.ExecuteNonQueryAsync();
 
                                 if (rowsAffected < 0)
                                 {
-                                    // Save the image locally asynchronously
+                                    // If the database insert fails, save the image locally
                                     await Task.Run(() => SaveImageLocally(byteArray, timestamp));
-
-                                    MessageBox.Show($"Photo captured! Timestamp: {timestamp}", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                                 }
                                 else
                                 {
@@ -299,11 +351,12 @@ namespace Webcam_Checker
                     }
                 }
 
-                // Display the byte array in a MessageBox asynchronously
+                // Display the first 100 bytes of the image in a MessageBox asynchronously
                 await Task.Run(() =>
                 {
                     string hexString = BitConverter.ToString(byteArray.Take(100).ToArray());
-                    //MessageBox.Show($"First 100 bytes of the image:\n\n{hexString}", "Image Data", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    // Optionally display the hex string if needed for debugging purposes
+                    // MessageBox.Show($"First 100 bytes of the image:\n\n{hexString}", "Image Data", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 });
             }
             catch (Exception ex)
@@ -312,20 +365,21 @@ namespace Webcam_Checker
             }
             finally
             {
-                // Reset the frame after processing
-                currentFrame = null;
+                // Reset the frozen frame flag after processing is complete
                 isFrameFrozen = false;
             }
         }
+        #endregion
 
+        #region "Save Image Locally."
         private async void SaveImageLocally(byte[] byteArray, string timestamp)
         {
             try
             {
-                // Get the user's Desktop folder
+                // Get the user's Desktop folder path
                 string documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
 
-                // Generate a unique filename
+                // Generate a unique filename using the timestamp
                 string fileName = $"Capture_{timestamp}.jpeg";
                 string filePath = Path.Combine(documentsPath, fileName);
 
@@ -337,27 +391,31 @@ namespace Webcam_Checker
                         // Create a new bitmap with 24-bit color depth
                         using (Bitmap bitmap = new Bitmap(originalBitmap.Width, originalBitmap.Height, PixelFormat.Format24bppRgb))
                         {
+                            // Optional delay for testing purposes
                             await Task.Delay(2500);
+
                             // Draw the original bitmap onto the new bitmap
                             using (Graphics g = Graphics.FromImage(bitmap))
                             {
                                 g.DrawImage(originalBitmap, 0, 0);
                             }
 
-                            // Save the bitmap to a JPEG file
+                            // Save the bitmap to a JPEG file locally
                             bitmap.Save(filePath, ImageFormat.Jpeg);
                         }
                     }
                 }
 
-                //MessageBox.Show($"Local copy of the image saved successfully: {fileName}", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show($"Local copy of the image saved successfully: {fileName}", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Failed to save local copy: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+        #endregion
 
+        #region "Convert Image to Byte Array."
         private byte[] ImageToByteArray(Bitmap bitmap)
         {
             using (MemoryStream ms = new MemoryStream())
@@ -366,7 +424,8 @@ namespace Webcam_Checker
                 return ms.ToArray();
             }
         }
-
+        #endregion
+        #region "Enhance Image."
         // Implement this class with the following methods
         public class ImageEnhancer
         {
@@ -386,11 +445,19 @@ namespace Webcam_Checker
                 return result;
             }
         }
-
+        #endregion
+        #region "Resolution Selection."
         private void cbResolution_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (cbResolution.SelectedIndex > 0)
             {
+                // Stop the video capture
+                if (videoCaptureDevice.IsRunning)
+                {
+                    videoCaptureDevice.Stop();
+                }
+
+                // Extract the selected resolution from the ComboBox
                 string selectedResolution = cbResolution.SelectedItem.ToString();
                 string[] dimensions = selectedResolution.Split('x');
 
@@ -401,9 +468,22 @@ namespace Webcam_Checker
                     Width = width;
                     Height = height;
 
+                    // Set the new frame size for the currentFrame bitmap
                     currentFrame = new Bitmap(Width, Height);
 
-                    Console.WriteLine($"Current frame resolution set to: {Width}x{Height}");
+                    // Set the new resolution on the video capture device
+                    var selectedResolutionCapability = videoCaptureDevice.VideoCapabilities
+                        .FirstOrDefault(res => res.FrameSize.Width == Width && res.FrameSize.Height == Height);
+
+                    if (selectedResolutionCapability != null)
+                    {
+                        videoCaptureDevice.VideoResolution = selectedResolutionCapability;
+                    }
+
+                    // Restart the video capture with the new resolution
+                    videoCaptureDevice.Start();
+
+                    Console.WriteLine($"Resolution changed to: {Width}x{Height}");
                 }
                 else
                 {
@@ -412,9 +492,10 @@ namespace Webcam_Checker
             }
             else if (cbResolution.SelectedIndex == 0)
             {
-
+                MessageBox.Show("Please select a valid resolution.");
             }
         }
-
+        #endregion
+        #endregion
     }
 }
